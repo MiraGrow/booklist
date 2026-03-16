@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독서 기록장</title>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700;900&family=Caveat:wght@400;700&family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="h-full">
+    <div id="app" class="h-full w-full overflow-auto">
+        <header class="text-center py-8 px-4 header-border">
+            <div class="header-content">
+                <h1 id="el-title">독서 기록장</h1>
+                <p id="el-subtitle" class="mt-2 text-sm">나만의 오래된 책방</p>
+            </div>
+            <div class="mt-3 flex justify-center gap-1">
+                <span class="deco-line"></span> 
+                <span class="deco-icon">📖</span> 
+                <span class="deco-line"></span>
+            </div>
+        </header>
+
+        <main class="max-w-2xl mx-auto px-4 py-6 pb-16">
+            <section id="form-section" class="form-container rounded-xl p-6 mb-8">
+                <div class="paper-texture"></div>
+                <h2 class="text-lg font-bold mb-4 flex items-center gap-2 relative z-10 title-font">
+                    <i data-lucide="feather" class="icon-small"></i> 새 기록 남기기
+                </h2>
+                <form id="book-form" class="space-y-4 relative z-10">
+                    <div>
+                        <label for="inp-title" class="label-style">제목</label>
+                        <input id="inp-title" type="text" required placeholder="책 제목을 입력하세요" class="input-field">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="inp-author" class="label-style">지은이</label>
+                            <input id="inp-author" type="text" required placeholder="저자명" class="input-field">
+                        </div>
+                        <div>
+                            <label for="inp-genre" class="label-style">장르</label>
+                            <select id="inp-genre" class="input-field">
+                                <option value="소설">소설</option>
+                                <option value="시/에세이">시/에세이</option>
+                                <option value="인문">인문</option>
+                                <option value="자기계발">자기계발</option>
+                                <option value="과학">과학</option>
+                                <option value="역사">역사</option>
+                                <option value="판타지">판타지</option>
+                                <option value="기타">기타</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="label-style">별점</label>
+                        <div id="star-rating" class="flex gap-1"></div>
+                    </div>
+                    <div>
+                        <label for="inp-memo" class="label-style">인상 깊은 내용</label>
+                        <textarea id="inp-memo" rows="3" required placeholder="기억에 남는 문장이나 감상을 적어보세요..." class="input-field resize-none"></textarea>
+                    </div>
+                    <button type="submit" class="submit-btn">기록 저장하기</button>
+                </form>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold mb-4 flex items-center gap-2 title-font text-main">
+                    <i data-lucide="library" class="icon-small"></i> 나의 서재 
+                    <span id="book-count" class="count-badge">0권</span>
+                </h2>
+                <div id="book-list" class="space-y-3"></div>
+                <p id="empty-msg" class="empty-text">아직 기록된 책이 없습니다.<br>첫 번째 독서 기록을 남겨보세요 📚</p>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

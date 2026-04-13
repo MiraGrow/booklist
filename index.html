@@ -1,29 +1,757 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rush Hour Game</title>
+    <title>Rush Hour - 퍼즐 게임</title>
     <style>
-        /* Basic CSS styling here */
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        #game-board { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
-        .car { width: 50px; height: 50px; background-color: red; position: relative; }
-        /* Additional styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .title {
+            font-size: 3em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .move-counter {
+            font-size: 1.3em;
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .difficulty-selector {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .difficulty-btn {
+            padding: 10px 20px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .difficulty-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .difficulty-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .board-section {
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 2px;
+            background: #333;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 20px auto;
+            width: fit-content;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .cell {
+            width: 70px;
+            height: 70px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .cell.exit {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            border: 2px dashed #ff9800;
+        }
+
+        .vehicle {
+            position: absolute;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: move;
+            font-weight: bold;
+            color: white;
+            user-select: none;
+            transition: all 0.15s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .vehicle:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .vehicle.selected {
+            transform: scale(1.08);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+            border: 2px solid white;
+        }
+
+        .vehicle.red {
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+        }
+
+        .vehicle.blue {
+            background: linear-gradient(135deg, #4444ff 0%, #0000cc 100%);
+        }
+
+        .vehicle.green {
+            background: linear-gradient(135deg, #44ff44 0%, #00cc00 100%);
+        }
+
+        .vehicle.yellow {
+            background: linear-gradient(135deg, #ffdd44 0%, #ffaa00 100%);
+            color: #333;
+        }
+
+        .vehicle.orange {
+            background: linear-gradient(135deg, #ff8844 0%, #ff5500 100%);
+        }
+
+        .vehicle.purple {
+            background: linear-gradient(135deg, #bb44ff 0%, #7700cc 100%);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-restart {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-restart:hover {
+            background: #ff5252;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(255, 107, 107, 0.3);
+        }
+
+        .btn-restart:active {
+            transform: translateY(0);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: popIn 0.3s ease-out;
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0.8) translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-title {
+            font-size: 2.5em;
+            color: #667eea;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .modal-stats {
+            font-size: 1.3em;
+            color: #333;
+            margin: 20px 0;
+            line-height: 1.8;
+        }
+
+        .star-rating {
+            font-size: 3em;
+            margin: 20px 0;
+            letter-spacing: 10px;
+        }
+
+        .btn-close-modal {
+            background: #667eea;
+            color: white;
+            margin-top: 20px;
+        }
+
+        .btn-close-modal:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .info-text {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 15px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        @media (max-width: 480px) {
+            .game-container {
+                padding: 20px;
+            }
+
+            .title {
+                font-size: 2em;
+            }
+
+            .cell {
+                width: 55px;
+                height: 55px;
+            }
+
+            .board {
+                padding: 8px;
+                gap: 1px;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>Rush Hour Game</h1>
-    <div id="game-board">
-        <!-- Game board with cars -->
+    <div class="game-container">
+        <div class="header">
+            <div class="title">🚗 Rush Hour</div>
+            <div class="move-counter">이동: <span id="moveCount">0</span></div>
+            <div class="difficulty-selector">
+                <button class="difficulty-btn active" data-difficulty="easy">쉬움</button>
+                <button class="difficulty-btn" data-difficulty="normal">보통</button>
+                <button class="difficulty-btn" data-difficulty="hard">어려움</button>
+            </div>
+        </div>
+
+        <div class="board-section">
+            <div class="board" id="board"></div>
+            <div class="info-text">
+                빨간 차를 오른쪽 출구로 탈출시키세요! 🎯
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-restart" id="restartBtn">다시 시작 🔄</button>
+        </div>
     </div>
+
+    <!-- 클리어 모달 -->
+    <div class="modal" id="clearModal">
+        <div class="modal-content">
+            <div class="modal-title">🎉 클리어!</div>
+            <div class="modal-stats">
+                <div>이동 횟수: <strong id="finalMoveCount">0</strong></div>
+                <div class="star-rating" id="starRating"></div>
+            </div>
+            <button class="btn btn-close-modal" id="closeModalBtn">계속하기</button>
+        </div>
+    </div>
+
     <script>
-        // JavaScript logic for the game
-        function initGame() {
-            // Initialize game state and add event listeners
+        // ==========================================
+        // 게임 상태 관리
+        // ==========================================
+
+        const BOARD_SIZE = 6;
+        const CELL_SIZE = 70;
+        const EXIT_POS = 5; // 출구는 6번째 열(인덱스 5)
+
+        let gameState = {
+            moveCount: 0,
+            currentDifficulty: 'easy',
+            vehicles: [],
+            selectedVehicle: null,
+            isCleared: false
+        };
+
+        // ==========================================
+        // 차량 데이터 정의
+        // ==========================================
+
+        const PUZZLE_SETS = {
+            easy: [
+                [
+                    { id: 'A', x: 1, y: 2, length: 2, direction: 'horizontal', color: 'red' },
+                    { id: 'B', x: 0, y: 0, length: 3, direction: 'vertical', color: 'blue' },
+                    { id: 'C', x: 3, y: 1, length: 2, direction: 'horizontal', color: 'green' },
+                    { id: 'D', x: 5, y: 3, length: 2, direction: 'vertical', color: 'yellow' }
+                ]
+            ],
+            normal: [
+                [
+                    { id: 'A', x: 1, y: 2, length: 2, direction: 'horizontal', color: 'red' },
+                    { id: 'B', x: 0, y: 0, length: 3, direction: 'vertical', color: 'blue' },
+                    { id: 'C', x: 3, y: 1, length: 2, direction: 'horizontal', color: 'green' },
+                    { id: 'D', x: 5, y: 3, length: 2, direction: 'vertical', color: 'yellow' },
+                    { id: 'E', x: 2, y: 4, length: 2, direction: 'vertical', color: 'orange' }
+                ]
+            ],
+            hard: [
+                [
+                    { id: 'A', x: 1, y: 2, length: 2, direction: 'horizontal', color: 'red' },
+                    { id: 'B', x: 0, y: 0, length: 3, direction: 'vertical', color: 'blue' },
+                    { id: 'C', x: 3, y: 1, length: 3, direction: 'horizontal', color: 'green' },
+                    { id: 'D', x: 0, y: 4, length: 2, direction: 'horizontal', color: 'yellow' },
+                    { id: 'E', x: 2, y: 4, length: 2, direction: 'vertical', color: 'orange' },
+                    { id: 'F', x: 4, y: 5, length: 2, direction: 'horizontal', color: 'purple' }
+                ]
+            ]
+        };
+
+        // ==========================================
+        // 충돌 체크 함수
+        // ==========================================
+
+        /**
+         * 주어진 위치에 다른 차량이 있는지 확인
+         * @param {number} x - x 좌표
+         * @param {number} y - y 좌표
+         * @param {string} excludeId - 제외할 차량 ID
+         * @returns {boolean} 충돌 여부
+         */
+        function isPositionOccupied(x, y, excludeId = null) {
+            return gameState.vehicles.some(vehicle => {
+                if (vehicle.id === excludeId) return false;
+                
+                for (let i = 0; i < vehicle.length; i++) {
+                    if (vehicle.direction === 'horizontal') {
+                        if (vehicle.y === y && vehicle.x + i === x) return true;
+                    } else {
+                        if (vehicle.x === x && vehicle.y + i === y) return true;
+                    }
+                }
+                return false;
+            });
         }
-        // Additional game logic
-        initGame();
+
+        /**
+         * 차량이 이동할 수 있는 범위 계산
+         * @param {object} vehicle - 차량 객체
+         * @returns {object} { minPos, maxPos }
+         */
+        function getMovableRange(vehicle) {
+            let minPos, maxPos;
+
+            if (vehicle.direction === 'horizontal') {
+                // 왼쪽 경계
+                minPos = 0;
+                for (let x = vehicle.x - 1; x >= 0; x--) {
+                    if (isPositionOccupied(x, vehicle.y, vehicle.id)) {
+                        minPos = x + 1;
+                        break;
+                    }
+                }
+
+                // 오른쪽 경계
+                maxPos = BOARD_SIZE - vehicle.length;
+                for (let x = vehicle.x + vehicle.length; x < BOARD_SIZE; x++) {
+                    if (isPositionOccupied(x, vehicle.y, vehicle.id)) {
+                        maxPos = x - vehicle.length;
+                        break;
+                    }
+                }
+
+                return { minPos, maxPos, axis: 'x' };
+            } else {
+                // 위쪽 경계
+                minPos = 0;
+                for (let y = vehicle.y - 1; y >= 0; y--) {
+                    if (isPositionOccupied(vehicle.x, y, vehicle.id)) {
+                        minPos = y + 1;
+                        break;
+                    }
+                }
+
+                // 아래쪽 경계
+                maxPos = BOARD_SIZE - vehicle.length;
+                for (let y = vehicle.y + vehicle.length; y < BOARD_SIZE; y++) {
+                    if (isPositionOccupied(vehicle.x, y, vehicle.id)) {
+                        maxPos = y - vehicle.length;
+                        break;
+                    }
+                }
+
+                return { minPos, maxPos, axis: 'y' };
+            }
+        }
+
+        /**
+         * 차량이 이동 가능한지 확인
+         * @param {object} vehicle - 차량 객체
+         * @param {number} newX - 새 x 좌표
+         * @param {number} newY - 새 y 좌표
+         * @returns {boolean} 이동 가능 여부
+         */
+        function canMoveVehicle(vehicle, newX, newY) {
+            const range = getMovableRange(vehicle);
+
+            if (vehicle.direction === 'horizontal') {
+                return newY === vehicle.y && newX >= range.minPos && newX <= range.maxPos;
+            } else {
+                return newX === vehicle.x && newY >= range.minPos && newY <= range.maxPos;
+            }
+        }
+
+        /**
+         * 빨간 차가 탈출했는지 확인
+         * @returns {boolean} 탈출 여부
+         */
+        function isGameCleared() {
+            const redVehicle = gameState.vehicles.find(v => v.id === 'A');
+            return redVehicle && redVehicle.x + redVehicle.length - 1 === EXIT_POS;
+        }
+
+        // ==========================================
+        // UI 렌더링 함수
+        // ==========================================
+
+        /**
+         * 보드 렌더링
+         */
+        function renderBoard() {
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+
+            // 셀 생성
+            for (let y = 0; y < BOARD_SIZE; y++) {
+                for (let x = 0; x < BOARD_SIZE; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    
+                    // 출구 표시 (빨간 차량 오른쪽, 중앙)
+                    if (x === EXIT_POS && y === 2) {
+                        cell.classList.add('exit');
+                    }
+
+                    boardEl.appendChild(cell);
+                }
+            }
+
+            // 차량 렌더링
+            gameState.vehicles.forEach(vehicle => {
+                const vehicleEl = document.createElement('div');
+                vehicleEl.className = `vehicle ${vehicle.color}`;
+                if (vehicle.id === gameState.selectedVehicle?.id) {
+                    vehicleEl.classList.add('selected');
+                }
+
+                vehicleEl.textContent = vehicle.id;
+                vehicleEl.dataset.vehicleId = vehicle.id;
+
+                // 크기 계산
+                if (vehicle.direction === 'horizontal') {
+                    vehicleEl.style.width = `${vehicle.length * CELL_SIZE + (vehicle.length - 1) * 2}px`;
+                    vehicleEl.style.height = `${CELL_SIZE}px`;
+                } else {
+                    vehicleEl.style.width = `${CELL_SIZE}px`;
+                    vehicleEl.style.height = `${vehicle.length * CELL_SIZE + (vehicle.length - 1) * 2}px`;
+                }
+
+                // 위치 계산
+                vehicleEl.style.left = `${vehicle.x * (CELL_SIZE + 2) + 10}px`;
+                vehicleEl.style.top = `${vehicle.y * (CELL_SIZE + 2) + 10}px`;
+
+                // 이벤트 리스너
+                vehicleEl.addEventListener('mousedown', (e) => handleVehicleMouseDown(e, vehicle));
+                vehicleEl.addEventListener('touchstart', (e) => handleVehicleTouchStart(e, vehicle));
+
+                boardEl.appendChild(vehicleEl);
+            });
+        }
+
+        /**
+         * 이동 카운터 업데이트
+         */
+        function updateMoveCounter() {
+            document.getElementById('moveCount').textContent = gameState.moveCount;
+        }
+
+        /**
+         * 별점 계산
+         */
+        function calculateStars(moveCount) {
+            if (moveCount <= 10) return '⭐⭐⭐';
+            if (moveCount <= 15) return '⭐⭐';
+            return '⭐';
+        }
+
+        /**
+         * 클리어 모달 표시
+         */
+        function showClearModal() {
+            document.getElementById('finalMoveCount').textContent = gameState.moveCount;
+            document.getElementById('starRating').textContent = calculateStars(gameState.moveCount);
+            document.getElementById('clearModal').classList.add('show');
+        }
+
+        // ==========================================
+        // 인터랙션 핸들러
+        // ==========================================
+
+        /**
+         * 마우스 다운 이벤트
+         */
+        function handleVehicleMouseDown(e, vehicle) {
+            e.preventDefault();
+            
+            if (gameState.isCleared) return;
+
+            gameState.selectedVehicle = vehicle;
+            renderBoard();
+
+            const startX = e.clientX;
+            const startY = e.clientY;
+
+            function handleMouseMove(moveEvent) {
+                const deltaX = moveEvent.clientX - startX;
+                const deltaY = moveEvent.clientY - startY;
+
+                if (vehicle.direction === 'horizontal' && Math.abs(deltaX) > 10) {
+                    const newX = Math.max(0, Math.min(BOARD_SIZE - vehicle.length, 
+                        vehicle.x + Math.round(deltaX / (CELL_SIZE + 2))));
+                    
+                    if (canMoveVehicle(vehicle, newX, vehicle.y)) {
+                        vehicle.x = newX;
+                        renderBoard();
+                    }
+                } else if (vehicle.direction === 'vertical' && Math.abs(deltaY) > 10) {
+                    const newY = Math.max(0, Math.min(BOARD_SIZE - vehicle.length,
+                        vehicle.y + Math.round(deltaY / (CELL_SIZE + 2))));
+                    
+                    if (canMoveVehicle(vehicle, vehicle.x, newY)) {
+                        vehicle.y = newY;
+                        renderBoard();
+                    }
+                }
+            }
+
+            function handleMouseUp() {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+
+                // 이동했는지 확인
+                const moved = vehicle.direction === 'horizontal' 
+                    ? vehicle.x !== Math.round((startX - 10) / (CELL_SIZE + 2))
+                    : vehicle.y !== Math.round((startY - 10) / (CELL_SIZE + 2));
+
+                if (moved) {
+                    gameState.moveCount++;
+                    updateMoveCounter();
+
+                    if (isGameCleared()) {
+                        gameState.isCleared = true;
+                        setTimeout(showClearModal, 300);
+                    }
+                }
+
+                gameState.selectedVehicle = null;
+                renderBoard();
+            }
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        }
+
+        /**
+         * 터치 스타트 이벤트
+         */
+        function handleVehicleTouchStart(e, vehicle) {
+            e.preventDefault();
+
+            if (gameState.isCleared) return;
+
+            gameState.selectedVehicle = vehicle;
+            renderBoard();
+
+            const touch = e.touches[0];
+            const startX = touch.clientX;
+            const startY = touch.clientY;
+
+            function handleTouchMove(moveEvent) {
+                const touch = moveEvent.touches[0];
+                const deltaX = touch.clientX - startX;
+                const deltaY = touch.clientY - startY;
+
+                if (vehicle.direction === 'horizontal' && Math.abs(deltaX) > 10) {
+                    const newX = Math.max(0, Math.min(BOARD_SIZE - vehicle.length,
+                        vehicle.x + Math.round(deltaX / (CELL_SIZE + 2))));
+                    
+                    if (canMoveVehicle(vehicle, newX, vehicle.y)) {
+                        vehicle.x = newX;
+                        renderBoard();
+                    }
+                } else if (vehicle.direction === 'vertical' && Math.abs(deltaY) > 10) {
+                    const newY = Math.max(0, Math.min(BOARD_SIZE - vehicle.length,
+                        vehicle.y + Math.round(deltaY / (CELL_SIZE + 2))));
+                    
+                    if (canMoveVehicle(vehicle, vehicle.x, newY)) {
+                        vehicle.y = newY;
+                        renderBoard();
+                    }
+                }
+            }
+
+            function handleTouchEnd() {
+                document.removeEventListener('touchmove', handleTouchMove);
+                document.removeEventListener('touchend', handleTouchEnd);
+
+                gameState.moveCount++;
+                updateMoveCounter();
+
+                if (isGameCleared()) {
+                    gameState.isCleared = true;
+                    setTimeout(showClearModal, 300);
+                }
+
+                gameState.selectedVehicle = null;
+                renderBoard();
+            }
+
+            document.addEventListener('touchmove', handleTouchMove);
+            document.addEventListener('touchend', handleTouchEnd);
+        }
+
+        /**
+         * 난이도 버튼 클릭
+         */
+        function handleDifficultyChange(e) {
+            document.querySelectorAll('.difficulty-btn').forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            gameState.currentDifficulty = e.target.dataset.difficulty;
+            startNewGame();
+        }
+
+        // ==========================================
+        // 게임 초기화 및 시작
+        // ==========================================
+
+        /**
+         * 새 게임 시작
+         */
+        function startNewGame() {
+            gameState.moveCount = 0;
+            gameState.isCleared = false;
+            gameState.selectedVehicle = null;
+            
+            // 난이도별 초기 배치
+            gameState.vehicles = JSON.parse(JSON.stringify(PUZZLE_SETS[gameState.currentDifficulty][0]));
+            
+            updateMoveCounter();
+            renderBoard();
+            document.getElementById('clearModal').classList.remove('show');
+        }
+
+        /**
+         * 이벤트 리스너 등록
+         */
+        function initializeEventListeners() {
+            // 난이도 선택
+            document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                btn.addEventListener('click', handleDifficultyChange);
+            });
+
+            // 다시 시작 버튼
+            document.getElementById('restartBtn').addEventListener('click', startNewGame);
+
+            // 모달 닫기
+            document.getElementById('closeModalBtn').addEventListener('click', () => {
+                document.getElementById('clearModal').classList.remove('show');
+                startNewGame();
+            });
+        }
+
+        // ==========================================
+        // 게임 시작
+        // ==========================================
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initializeEventListeners();
+            startNewGame();
+        });
     </script>
 </body>
 </html>

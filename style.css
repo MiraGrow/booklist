@@ -15,6 +15,21 @@
             padding: 20px;
         }
 
+        #game-board {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            border: 2px solid #000;
+        }
+        .vehicle {
+            position: absolute;
+            background-color: red;
+            width: 50px; /* adjust width based on vehicle type */
+            height: 50px; /* adjust height based on vehicle type */
+            color: white;
+            text-align: center;
+            line-height: 50px; /* vertically center text */
+        }
         .game-container {
             background: white;
             border-radius: 20px;

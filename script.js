@@ -1,140 +1,423 @@
-// 데이터 상태 관리 (로컬 스토리지 사용)
-let books = JSON.parse(localStorage.getItem('reading_journal') || '[]');
-let currentRating = 3;
+<script>
+        // ==========================================
+        // 게임 상태 관리
+        // ==========================================
 
-// 초기 아이콘 생성
-lucide.createIcons();
+        const BOARD_SIZE = 6;
+        const CELL_SIZE = 70;
+        const EXIT_POS = 5; // 출구는 6번째 열(인덱스 5)
 
-// 별점 시스템 초기화
-const starContainer = document.getElementById('star-rating');
-function initStars() {
-    starContainer.innerHTML = '';
-    for (let i = 1; i <= 5; i++) {
-        const s = document.createElement('span');
-        s.className = 'star-btn';
-        s.dataset.val = i;
-        s.textContent = i <= currentRating ? '★' : '☆';
-        s.style.color = i <= currentRating ? '#c8860a' : '#c4a97088';
-        s.addEventListener('click', () => { 
-            currentRating = i; 
-            renderStars(); 
-        });
-        starContainer.appendChild(s);
-    }
-}
+        let gameState = {
+            moveCount: 0,
+            currentDifficulty: 'easy',
+            vehicles: [],
+            selectedVehicle: null,
+            isCleared: false
+        };
 
-function renderStars() {
-    [...starContainer.children].forEach((s, idx) => {
-        const on = idx < currentRating;
-        s.textContent = on ? '★' : '☆';
-        s.style.color = on ? '#c8860a' : '#c4a97088';
-    });
-}
+        // ==========================================
+        // 차량 데이터 정의
+        // ==========================================
 
-// 데이터 저장
-function save() { 
-    localStorage.setItem('reading_journal', JSON.stringify(books)); 
-}
+        const PUZZLE_SETS = {
+            easy: [
+                [
+                    { id: 'A', x: 1, y: 2, length: 2, direction: 'horizontal', color: 'red' },
+                    { id: 'B', x: 0, y: 0, length: 3, direction: 'vertical', color: 'blue' },
+                    { id: 'C', x: 3, y: 1, length: 2, direction: 'horizontal', color: 'green' },
+                    { id: 'D', x: 5, y: 3, length: 2, direction: 'vertical', color: 'yellow' }
+                ]
+            ],
+            normal: [
+                [
+                    { id: 'A', x: 1, y: 2, length: 2, direction: 'horizontal', color: 'red' },
+                    { id: 'B', x: 0, y: 0, length: 3, direction: 'vertical', color: 'blue' },
+                    { id: 'C', x: 3, y: 1, length: 2, direction: 'horizontal', color: 'green' },
+                    { id: 'D', x: 5, y: 3, length: 2, direction: 'vertical', color: 'yellow' },
+                    { id: 'E', x: 2, y: 4, length: 2, direction: 'vertical', color: 'orange' }
+                ]
+            ],
+            hard: [
+                [
+                    { id: 'A', x: 1, y: 2, length: 2, direction: 'horizontal', color: 'red' },
+                    { id: 'B', x: 0, y: 0, length: 3, direction: 'vertical', color: 'blue' },
+                    { id: 'C', x: 3, y: 1, length: 3, direction: 'horizontal', color: 'green' },
+                    { id: 'D', x: 0, y: 4, length: 2, direction: 'horizontal', color: 'yellow' },
+                    { id: 'E', x: 2, y: 4, length: 2, direction: 'vertical', color: 'orange' },
+                    { id: 'F', x: 4, y: 5, length: 2, direction: 'horizontal', color: 'purple' }
+                ]
+            ]
+        };
 
-// 폼 제출 이벤트
-document.getElementById('book-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const book = {
-        id: Date.now().toString(),
-        title: document.getElementById('inp-title').value.trim(),
-        author: document.getElementById('inp-author').value.trim(),
-        genre: document.getElementById('inp-genre').value,
-        rating: currentRating,
-        memo: document.getElementById('inp-memo').value.trim(),
-        date: new Date().toISOString()
-    };
-    
-    books.unshift(book);
-    save();
-    
-    // 초기화
-    e.target.reset();
-    currentRating = 3;
-    renderStars();
-    renderList();
-});
+        // ==========================================
+        // 충돌 체크 함수
+        // ==========================================
 
-// 리스트 렌더링
-function renderList() {
-    const list = document.getElementById('book-list');
-    const empty = document.getElementById('empty-msg');
-    document.getElementById('book-count').textContent = books.length + '권';
-
-    if (!books.length) { 
-        list.innerHTML = ''; 
-        empty.style.display = 'block'; 
-        return; 
-    }
-    empty.style.display = 'none';
-    list.innerHTML = '';
-
-    books.forEach((book, idx) => {
-        const card = document.createElement('div');
-        card.className = 'book-card rounded-xl p-4 fade-in';
-        card.dataset.id = book.id;
-        card.style.animationDelay = (idx * 0.05) + 's';
-        
-        const stars = '★'.repeat(book.rating) + '☆'.repeat(5 - book.rating);
-        const d = new Date(book.date);
-        const dateStr = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
-
-        card.innerHTML = `
-            <div class="flex justify-between items-start gap-2 relative z-10">
-                <div class="min-w-0 flex-1">
-                    <h3 class="font-bold text-base truncate" style="color:#3e2a14; font-family:'Noto Serif KR',serif">${escapeHtml(book.title)}</h3>
-                    <p class="text-xs mt-0.5" style="color:#8b6d4a">${escapeHtml(book.author)} · ${escapeHtml(book.genre)} · ${dateStr}</p>
-                    <p class="text-sm mt-0.5" style="color:#c8860a; letter-spacing:2px">${stars}</p>
-                </div>
-                <button class="del-btn p-1.5 rounded-lg transition-colors" style="color:#a08060;">
-                    <i data-lucide="trash-2" style="width:16px;height:16px"></i>
-                </button>
-            </div>
-            <div class="confirm-area relative z-10"></div>
-            <p class="text-sm mt-3 leading-relaxed relative z-10" style="color:#5a3a1a; border-top:1px dashed rgba(139,90,43,.15); padding-top:10px">
-                "${escapeHtml(book.memo)}"
-            </p>
-            <div class="paper-texture"></div>
-        `;
-
-        // 삭제 로직
-        card.querySelector('.del-btn').addEventListener('click', () => {
-            const area = card.querySelector('.confirm-area');
-            if (area.children.length) { area.innerHTML = ''; return; }
-            
-            area.innerHTML = `
-                <div class="delete-confirm flex items-center gap-2 mt-2 text-xs" style="color:#b45040">
-                    <span>삭제할까요?</span>
-                    <button class="cfm-yes px-3 py-1 rounded font-bold" style="background:#b45040;color:#fff">삭제</button>
-                    <button class="cfm-no px-3 py-1 rounded" style="background:rgba(139,90,43,.1);color:#6b4226">취소</button>
-                </div>`;
+        /**
+         * 주어진 위치에 다른 차량이 있는지 확인
+         * @param {number} x - x 좌표
+         * @param {number} y - y 좌표
+         * @param {string} excludeId - 제외할 차량 ID
+         * @returns {boolean} 충돌 여부
+         */
+        function isPositionOccupied(x, y, excludeId = null) {
+            return gameState.vehicles.some(vehicle => {
+                if (vehicle.id === excludeId) return false;
                 
-            area.querySelector('.cfm-yes').addEventListener('click', () => {
-                books = books.filter(b => b.id !== book.id);
-                save();
-                card.style.opacity = '0';
-                card.style.transform = 'translateY(-10px)';
-                setTimeout(() => renderList(), 300);
+                for (let i = 0; i < vehicle.length; i++) {
+                    if (vehicle.direction === 'horizontal') {
+                        if (vehicle.y === y && vehicle.x + i === x) return true;
+                    } else {
+                        if (vehicle.x === x && vehicle.y + i === y) return true;
+                    }
+                }
+                return false;
             });
-            area.querySelector('.cfm-no').addEventListener('click', () => { area.innerHTML = ''; });
+        }
+
+        /**
+         * 차량이 이동할 수 있는 범위 계산
+         * @param {object} vehicle - 차량 객체
+         * @returns {object} { minPos, maxPos }
+         */
+        function getMovableRange(vehicle) {
+            let minPos, maxPos;
+
+            if (vehicle.direction === 'horizontal') {
+                // 왼쪽 경계
+                minPos = 0;
+                for (let x = vehicle.x - 1; x >= 0; x--) {
+                    if (isPositionOccupied(x, vehicle.y, vehicle.id)) {
+                        minPos = x + 1;
+                        break;
+                    }
+                }
+
+                // 오른쪽 경계
+                maxPos = BOARD_SIZE - vehicle.length;
+                for (let x = vehicle.x + vehicle.length; x < BOARD_SIZE; x++) {
+                    if (isPositionOccupied(x, vehicle.y, vehicle.id)) {
+                        maxPos = x - vehicle.length;
+                        break;
+                    }
+                }
+
+                return { minPos, maxPos, axis: 'x' };
+            } else {
+                // 위쪽 경계
+                minPos = 0;
+                for (let y = vehicle.y - 1; y >= 0; y--) {
+                    if (isPositionOccupied(vehicle.x, y, vehicle.id)) {
+                        minPos = y + 1;
+                        break;
+                    }
+                }
+
+                // 아래쪽 경계
+                maxPos = BOARD_SIZE - vehicle.length;
+                for (let y = vehicle.y + vehicle.length; y < BOARD_SIZE; y++) {
+                    if (isPositionOccupied(vehicle.x, y, vehicle.id)) {
+                        maxPos = y - vehicle.length;
+                        break;
+                    }
+                }
+
+                return { minPos, maxPos, axis: 'y' };
+            }
+        }
+
+        /**
+         * 차량이 이동 가능한지 확인
+         * @param {object} vehicle - 차량 객체
+         * @param {number} newX - 새 x 좌표
+         * @param {number} newY - 새 y 좌표
+         * @returns {boolean} 이동 가능 여부
+         */
+        function canMoveVehicle(vehicle, newX, newY) {
+            const range = getMovableRange(vehicle);
+
+            if (vehicle.direction === 'horizontal') {
+                return newY === vehicle.y && newX >= range.minPos && newX <= range.maxPos;
+            } else {
+                return newX === vehicle.x && newY >= range.minPos && newY <= range.maxPos;
+            }
+        }
+
+        /**
+         * 빨간 차가 탈출했는지 확인
+         * @returns {boolean} 탈출 여부
+         */
+        function isGameCleared() {
+            const redVehicle = gameState.vehicles.find(v => v.id === 'A');
+            return redVehicle && redVehicle.x + redVehicle.length - 1 === EXIT_POS;
+        }
+
+        // ==========================================
+        // UI 렌더링 함수
+        // ==========================================
+
+        /**
+         * 보드 렌더링
+         */
+        function renderBoard() {
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+
+            // 셀 생성
+            for (let y = 0; y < BOARD_SIZE; y++) {
+                for (let x = 0; x < BOARD_SIZE; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    
+                    // 출구 표시 (빨간 차량 오른쪽, 중앙)
+                    if (x === EXIT_POS && y === 2) {
+                        cell.classList.add('exit');
+                    }
+
+                    boardEl.appendChild(cell);
+                }
+            }
+
+            // 차량 렌더링
+            gameState.vehicles.forEach(vehicle => {
+                const vehicleEl = document.createElement('div');
+                vehicleEl.className = `vehicle ${vehicle.color}`;
+                if (vehicle.id === gameState.selectedVehicle?.id) {
+                    vehicleEl.classList.add('selected');
+                }
+
+                vehicleEl.textContent = vehicle.id;
+                vehicleEl.dataset.vehicleId = vehicle.id;
+
+                // 크기 계산
+                if (vehicle.direction === 'horizontal') {
+                    vehicleEl.style.width = `${vehicle.length * CELL_SIZE + (vehicle.length - 1) * 2}px`;
+                    vehicleEl.style.height = `${CELL_SIZE}px`;
+                } else {
+                    vehicleEl.style.width = `${CELL_SIZE}px`;
+                    vehicleEl.style.height = `${vehicle.length * CELL_SIZE + (vehicle.length - 1) * 2}px`;
+                }
+
+                // 위치 계산
+                vehicleEl.style.left = `${vehicle.x * (CELL_SIZE + 2) + 10}px`;
+                vehicleEl.style.top = `${vehicle.y * (CELL_SIZE + 2) + 10}px`;
+
+                // 이벤트 리스너
+                vehicleEl.addEventListener('mousedown', (e) => handleVehicleMouseDown(e, vehicle));
+                vehicleEl.addEventListener('touchstart', (e) => handleVehicleTouchStart(e, vehicle));
+
+                boardEl.appendChild(vehicleEl);
+            });
+        }
+
+        /**
+         * 이동 카운터 업데이트
+         */
+        function updateMoveCounter() {
+            document.getElementById('moveCount').textContent = gameState.moveCount;
+        }
+
+        /**
+         * 별점 계산
+         */
+        function calculateStars(moveCount) {
+            if (moveCount <= 10) return '⭐⭐⭐';
+            if (moveCount <= 15) return '⭐⭐';
+            return '⭐';
+        }
+
+        /**
+         * 클리어 모달 표시
+         */
+        function showClearModal() {
+            document.getElementById('finalMoveCount').textContent = gameState.moveCount;
+            document.getElementById('starRating').textContent = calculateStars(gameState.moveCount);
+            document.getElementById('clearModal').classList.add('show');
+        }
+
+        // ==========================================
+        // 인터랙션 핸들러
+        // ==========================================
+
+        /**
+         * 마우스 다운 이벤트
+         */
+        function handleVehicleMouseDown(e, vehicle) {
+            e.preventDefault();
+            
+            if (gameState.isCleared) return;
+
+            gameState.selectedVehicle = vehicle;
+            renderBoard();
+
+            const startX = e.clientX;
+            const startY = e.clientY;
+
+            function handleMouseMove(moveEvent) {
+                const deltaX = moveEvent.clientX - startX;
+                const deltaY = moveEvent.clientY - startY;
+
+                if (vehicle.direction === 'horizontal' && Math.abs(deltaX) > 10) {
+                    const newX = Math.max(0, Math.min(BOARD_SIZE - vehicle.length, 
+                        vehicle.x + Math.round(deltaX / (CELL_SIZE + 2))));
+                    
+                    if (canMoveVehicle(vehicle, newX, vehicle.y)) {
+                        vehicle.x = newX;
+                        renderBoard();
+                    }
+                } else if (vehicle.direction === 'vertical' && Math.abs(deltaY) > 10) {
+                    const newY = Math.max(0, Math.min(BOARD_SIZE - vehicle.length,
+                        vehicle.y + Math.round(deltaY / (CELL_SIZE + 2))));
+                    
+                    if (canMoveVehicle(vehicle, vehicle.x, newY)) {
+                        vehicle.y = newY;
+                        renderBoard();
+                    }
+                }
+            }
+
+            function handleMouseUp() {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+
+                // 이동했는지 확인
+                const moved = vehicle.direction === 'horizontal' 
+                    ? vehicle.x !== Math.round((startX - 10) / (CELL_SIZE + 2))
+                    : vehicle.y !== Math.round((startY - 10) / (CELL_SIZE + 2));
+
+                if (moved) {
+                    gameState.moveCount++;
+                    updateMoveCounter();
+
+                    if (isGameCleared()) {
+                        gameState.isCleared = true;
+                        setTimeout(showClearModal, 300);
+                    }
+                }
+
+                gameState.selectedVehicle = null;
+                renderBoard();
+            }
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        }
+
+        /**
+         * 터치 스타트 이벤트
+         */
+        function handleVehicleTouchStart(e, vehicle) {
+            e.preventDefault();
+
+            if (gameState.isCleared) return;
+
+            gameState.selectedVehicle = vehicle;
+            renderBoard();
+
+            const touch = e.touches[0];
+            const startX = touch.clientX;
+            const startY = touch.clientY;
+
+            function handleTouchMove(moveEvent) {
+                const touch = moveEvent.touches[0];
+                const deltaX = touch.clientX - startX;
+                const deltaY = touch.clientY - startY;
+
+                if (vehicle.direction === 'horizontal' && Math.abs(deltaX) > 10) {
+                    const newX = Math.max(0, Math.min(BOARD_SIZE - vehicle.length,
+                        vehicle.x + Math.round(deltaX / (CELL_SIZE + 2))));
+                    
+                    if (canMoveVehicle(vehicle, newX, vehicle.y)) {
+                        vehicle.x = newX;
+                        renderBoard();
+                    }
+                } else if (vehicle.direction === 'vertical' && Math.abs(deltaY) > 10) {
+                    const newY = Math.max(0, Math.min(BOARD_SIZE - vehicle.length,
+                        vehicle.y + Math.round(deltaY / (CELL_SIZE + 2))));
+                    
+                    if (canMoveVehicle(vehicle, vehicle.x, newY)) {
+                        vehicle.y = newY;
+                        renderBoard();
+                    }
+                }
+            }
+
+            function handleTouchEnd() {
+                document.removeEventListener('touchmove', handleTouchMove);
+                document.removeEventListener('touchend', handleTouchEnd);
+
+                gameState.moveCount++;
+                updateMoveCounter();
+
+                if (isGameCleared()) {
+                    gameState.isCleared = true;
+                    setTimeout(showClearModal, 300);
+                }
+
+                gameState.selectedVehicle = null;
+                renderBoard();
+            }
+
+            document.addEventListener('touchmove', handleTouchMove);
+            document.addEventListener('touchend', handleTouchEnd);
+        }
+
+        /**
+         * 난이도 버튼 클릭
+         */
+        function handleDifficultyChange(e) {
+            document.querySelectorAll('.difficulty-btn').forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            gameState.currentDifficulty = e.target.dataset.difficulty;
+            startNewGame();
+        }
+
+        // ==========================================
+        // 게임 초기화 및 시작
+        // ==========================================
+
+        /**
+         * 새 게임 시작
+         */
+        function startNewGame() {
+            gameState.moveCount = 0;
+            gameState.isCleared = false;
+            gameState.selectedVehicle = null;
+            
+            // 난이도별 초기 배치
+            gameState.vehicles = JSON.parse(JSON.stringify(PUZZLE_SETS[gameState.currentDifficulty][0]));
+            
+            updateMoveCounter();
+            renderBoard();
+            document.getElementById('clearModal').classList.remove('show');
+        }
+
+        /**
+         * 이벤트 리스너 등록
+         */
+        function initializeEventListeners() {
+            // 난이도 선택
+            document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                btn.addEventListener('click', handleDifficultyChange);
+            });
+
+            // 다시 시작 버튼
+            document.getElementById('restartBtn').addEventListener('click', startNewGame);
+
+            // 모달 닫기
+            document.getElementById('closeModalBtn').addEventListener('click', () => {
+                document.getElementById('clearModal').classList.remove('show');
+                startNewGame();
+            });
+        }
+
+        // ==========================================
+        // 게임 시작
+        // ==========================================
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initializeEventListeners();
+            startNewGame();
         });
-
-        list.appendChild(card);
-        lucide.createIcons({ nodes: [card] });
-    });
-}
-
-// XSS 방지용 이스케이프 함수
-function escapeHtml(s) {
-    const d = document.createElement('div');
-    d.textContent = s;
-    return d.innerHTML;
-}
-
-// 초기화 실행
-initStars();
-renderList();
+    </script>
